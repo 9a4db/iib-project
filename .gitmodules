@@ -1,0 +1,3 @@
+[submodule "gpsdo/gen-board.h"]
+	path = gpsdo/gen-board.h
+	url = git@github.com:HarkonenBade/gen-board.h.git

@@ -1,0 +1,23 @@
+name: gpsdo
+lsefreq: 0
+hsefreq: 26000000
+voltage: 3.3
+mcutype: STM32F405xx
+default: input, pushpull, starthigh, pullup, highspeed
+pins:
+    SWDIO:      pa13, af0
+    SWCLK:      pa14, pulldown, af0
+    
+    GPS_PPS:    pa0, af1
+    GPS_RST:    pb5, output, pushpull, starthigh, pullup
+    UART_TX:    pb6, af7
+    UART_RX:    pb7, af7
+    
+    I2C_SCL:    pb8, af4, opendrain
+    I2C_SDA:    pb9, af4, opendrain    
+    
+    STATUS:     pc6, output, pushpull, startlow
+    
+    OTG_VBUS:   pb13, input, pulldown
+    OTG_DM:     pb14, af12
+    OTG_DP:     pb15, af12
