@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <export version="D">
   <design>
-    <source>/home/matt/Documents/iib-project/gpsdo/gpsdo.sch</source>
-    <date>Tue 12 Jun 2018 12:23:33 BST</date>
+    <source>/home/matt/Documents/iib-project/gpsdo/pcb/gpsdo.sch</source>
+    <date>Sat 16 Jun 2018 17:19:43 BST</date>
     <tool>Eeschema 5.0.0-rc2-unknown-68f6e3a~65~ubuntu16.04.1</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -172,7 +172,7 @@
       <value>4u7</value>
       <footprint>agg:0603</footprint>
       <fields>
-        <field name="Farnell">2496930</field>
+        <field name="Farnell">2525102</field>
       </fields>
       <libsource lib="agg-kicad" part="C" description=""/>
       <sheetpath names="/" tstamps="/"/>
@@ -202,7 +202,7 @@
       <value>100n</value>
       <footprint>agg:0402</footprint>
       <fields>
-        <field name="Farnell">9402047</field>
+        <field name="Farnell">2496771</field>
       </fields>
       <libsource lib="agg-kicad" part="C" description=""/>
       <sheetpath names="/" tstamps="/"/>
@@ -443,7 +443,7 @@
       <value>1u</value>
       <footprint>agg:0402</footprint>
       <fields>
-        <field name="Farnell">2496814</field>
+        <field name="Farnell">1758879</field>
       </fields>
       <libsource lib="agg-kicad" part="C" description=""/>
       <sheetpath names="/" tstamps="/"/>
@@ -453,7 +453,7 @@
       <value>1u</value>
       <footprint>agg:0402</footprint>
       <fields>
-        <field name="Farnell">2496814</field>
+        <field name="Farnell">1758879</field>
       </fields>
       <libsource lib="agg-kicad" part="C" description=""/>
       <sheetpath names="/" tstamps="/"/>
