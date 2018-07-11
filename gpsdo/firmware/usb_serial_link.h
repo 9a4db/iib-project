@@ -20,7 +20,6 @@ typedef struct __attribute__((packed)) {
 /* Logging Functions */
 void upload_position_packet(position_packet *pos_data);
 
-
 /* Start USB Serial Thread */
 void usb_serial_init(void);
 

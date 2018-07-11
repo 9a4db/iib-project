@@ -15,7 +15,10 @@ int main(void) {
     /* Initialise ChibiOS */
     halInit();
     chSysInit();
-
+    
+    /* Enable Active Antenna */
+    palClearPad(GPIOB, GPIOB_ANT_EN);
+    
     /* Start USB System */
     usb_serial_init();
     
@@ -25,8 +28,8 @@ int main(void) {
     /* Configure GPS to Produce 1MHz Reference */
     gps_init(&SD1, true, false, true);
 
-    /* Configure CS2100 */
-    //cs2100_configure(&I2CD1);
+    /* Configure CS2100 to Produce 10MHz Output */
+    cs2100_configure(&I2CD1);
     
     /* Start GPS State Machine */
     gps_thd_init();

@@ -442,7 +442,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
     tp5_1.tp_idx =           0;                   // TIMEPULSE
     tp5_1.version =          0;
     tp5_1.ant_cable_delay =  0;
-    tp5_1.freq_period =      0;           
+    tp5_1.freq_period =      1;           
     tp5_1.pulse_len_ratio =  0;   
     tp5_1.freq_period_lock = 1000000;             // 1 MHz
     tp5_1.pulse_len_ratio_lock = 0xffffffff >> 1; // (2^32/2)/2^32 = 50% duty cycle
@@ -454,6 +454,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
         UBX_CFG_TP5_FLAGS_IS_FREQ                   |
         UBX_CFG_TP5_FLAGS_ALIGN_TO_TOW              |
         UBX_CFG_TP5_FLAGS_POLARITY                  |
+        UBX_CFG_TP5_FLAGS_GRID_UTC_GNSS_GPS         |
         UBX_CFG_TP5_FLAGS_GRID_UTC_GNSS_UTC);
     
     gps_configured &= gps_tx_ack((uint8_t*)&tp5_1);
@@ -470,10 +471,10 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
     tp5_2.tp_idx               = 1;     // Safeboot pin
     tp5_2.version              = 0;
     tp5_2.ant_cable_delay      = 0;
-    tp5_2.freq_period          = 0;
+    tp5_2.freq_period          = 1;
     tp5_2.pulse_len_ratio      = 0; 
     tp5_2.freq_period_lock     = 1;     // 1 Hz
-    tp5_2.pulse_len_ratio_lock = 10000; // us
+    tp5_2.pulse_len_ratio_lock = 100;   // us
 
     if(rising_edge) {
 
@@ -486,6 +487,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
             UBX_CFG_TP5_FLAGS_IS_LENGTH                 |
             UBX_CFG_TP5_FLAGS_ALIGN_TO_TOW              |
             UBX_CFG_TP5_FLAGS_POLARITY                  |
+            UBX_CFG_TP5_FLAGS_GRID_UTC_GNSS_GPS         |
             UBX_CFG_TP5_FLAGS_GRID_UTC_GNSS_UTC);
     } else {
 
@@ -497,6 +499,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
             UBX_CFG_TP5_FLAGS_IS_FREQ                   |
             UBX_CFG_TP5_FLAGS_IS_LENGTH                 |
             UBX_CFG_TP5_FLAGS_ALIGN_TO_TOW              |
+            UBX_CFG_TP5_FLAGS_GRID_UTC_GNSS_GPS         |
             UBX_CFG_TP5_FLAGS_GRID_UTC_GNSS_UTC);
     }
 
@@ -540,7 +543,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
     return gps_configured;
 }
 
-/* Configure uBlox GPS - public function */
+/* Configure uBlox GPS */
 void gps_init(SerialDriver* seriald, bool nav_pvt, bool nav_posecef,
                 bool rising_edge){
 
@@ -557,7 +560,7 @@ void gps_init(SerialDriver* seriald, bool nav_pvt, bool nav_posecef,
 
     sdStart(gps_seriald, &serial_cfg);
 
-    while(!gps_configure(nav_pvt, nav_posecef, rising_edge)) {
+    while(!gps_configure(nav_pvt, nav_posecef, rising_edge)){
         
         set_status(STATUS_ERROR);
         chThdSleepMilliseconds(1000);
@@ -575,17 +578,16 @@ static THD_FUNCTION(gps_thd, arg) {
 
     (void)arg;
     chRegSetThreadName("GPS");
-
-    while(true) {
     
-        if(gps_configured) {
-            
+    /* Clear Buffer */
+    while(sdGetTimeout(gps_seriald, TIME_IMMEDIATE) != Q_TIMEOUT);
+
+    /* Run State Machine */
+    while(true){    
+        if(gps_configured){            
             ublox_state_machine(sdGet(gps_seriald));
-        }
-        else {
-        
+        } else {        
             set_status(STATUS_ERROR);
-            
             break;
         }
     }

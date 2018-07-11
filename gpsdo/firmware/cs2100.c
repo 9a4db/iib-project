@@ -31,8 +31,8 @@
 #define CS2100_DEVICE_CFG_1_R_MOD_SEL(x)    ((x<<5) & 0xE0)
 #define CS2100_DEVICE_CFG_1_AUX_OUT_SRC_REF_CLK         (0<<1)
 #define CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_IN          (1<<1)
-#define CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_OUT         (1<<1)
-#define CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_PLL_LOCK    (1<<1)
+#define CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_OUT         (1<<2)
+#define CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_PLL_LOCK    ((1<<1)|(1<<2))
 #define CS2100_DEVICE_CFG_1_EN_DEV_CFG_1    (1<<0)
 #define CS2100_GLOBAL_CFG_FREEZE            (1<<3)
 #define CS2100_GLOBAL_CFG_EN_DEV_CFG_2      (1<<0)
@@ -141,24 +141,15 @@ void cs2100_configure(I2CDriver* i2cd)
      */
     cs2100_write(CS2100_FUNCT_CFG_3, CS2100_FUNCT_CFG_3_CLK_IN_BW_1HZ);
 
-#if 1
-    /* Set ratio to 26MHz / 1MHz = 26
-     * 26 * (1<<20) = 0x01A00000
+
+    /* Set ratio to 10MHz / 1MHz = 10
+     * 10 * (1<<20) = 0x00A00000
      * This register is big endian.
      */
-    cs2100_write(CS2100_RATIO_1, 0x01);
+    cs2100_write(CS2100_RATIO_1, 0x00);
     cs2100_write(CS2100_RATIO_2, 0xA0);
     cs2100_write(CS2100_RATIO_3, 0x00);
     cs2100_write(CS2100_RATIO_4, 0x00);
-#else
-    /* Ratio 4MHz / 4MHz = 1
-     * 1 * (1<<20) = 0x0010_0000
-     */
-    cs2100_write(CS2100_RATIO_1, 0x00);
-    cs2100_write(CS2100_RATIO_2, 0x10);
-    cs2100_write(CS2100_RATIO_3, 0x00);
-    cs2100_write(CS2100_RATIO_4, 0x00);
-#endif
 
     /* Don't shift the ratio register at all,
      * output PLL lock on aux (not connected but can be probed),
@@ -166,7 +157,7 @@ void cs2100_configure(I2CDriver* i2cd)
      */
     cs2100_write(CS2100_DEVICE_CFG_1,
                  CS2100_DEVICE_CFG_1_R_MOD_SEL(0) |
-                 CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_PLL_LOCK |
+                 CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_OUT |
                  CS2100_DEVICE_CFG_1_EN_DEV_CFG_1);
 
     /* Must set EN_DEV_CFG_2 to 2. */
