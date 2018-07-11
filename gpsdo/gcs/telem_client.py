@@ -3,6 +3,7 @@
 import sys
 import struct
 import serial
+import datetime
 
 # Useage
 if len(sys.argv) != 2:
@@ -33,13 +34,13 @@ while True:
     if (log_type == MESSAGE_POSITION):
         payload = data[5:26]
         pos = struct.unpack('<iiiBBhBBBBB', payload)
-        print("POSITION PACKET:")
-        print("Timestamp = ", systick, " s")
-        print("lon = ", (pos[0]/10000000), "degrees")
-        print("lat = ", (pos[1]/10000000), "degrees")
-        print("height = ", (pos[2]/1000), "m")  
-        print("num sat = ", pos[3])
-        print("fix type = ", pos[4])
-        print("date = ", pos[7], "/", pos[6], "/", pos[5], "  ", pos[8], ":", pos[9], ":", pos[10])
-        print('\n\n')
+        print("POSITION INFO:")
+        print("Timestamp   ", systick, " s")
+        print("Longitude   ", (pos[0]/10000000), "degrees")
+        print("Latitude    ", (pos[1]/10000000), "degrees")
+        print("Height      ", (pos[2]/1000), "m")  
+        print("Satellites  ", pos[3])
+        print("Fix Type    ", pos[4])
+        print('Date         {:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime(pos[5], pos[6], pos[7], pos[8], pos[9], pos[10])))
+        print("\n\n\n\n\n\n\n\n\n\n\n\n")
  
