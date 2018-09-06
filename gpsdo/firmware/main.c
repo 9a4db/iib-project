@@ -33,9 +33,9 @@ int main(void) {
     
     /* Start GPS State Machine */
     gps_thd_init();
-
-    /* Turn on STAT LED */
-    set_status(STATUS_GOOD);
+    
+    /* Start Stsus Thread */
+    start_status_thread();
 
     /* Main Loop */
     while (true) {

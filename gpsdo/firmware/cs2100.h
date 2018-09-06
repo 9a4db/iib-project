@@ -4,9 +4,11 @@
 #include "hal.h"
 
 /* Configure the CS2100 to generate a suitable clock input.
- * Blocks until the CS2100 PLL indicates lock.
  */
 void cs2100_configure(I2CDriver* i2cd);
+
+/* Returns PLL Lock Status */
+bool cs2100_pll_status(void);
 
 
 #endif

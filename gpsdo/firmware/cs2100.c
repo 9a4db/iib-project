@@ -152,7 +152,7 @@ void cs2100_configure(I2CDriver* i2cd)
     cs2100_write(CS2100_RATIO_4, 0x00);
 
     /* Don't shift the ratio register at all,
-     * output PLL lock on aux (not connected but can be probed),
+     * output GPS clock on aux
      * must set EN_DEV_CFG_1 to 1.
      */
     cs2100_write(CS2100_DEVICE_CFG_1,
@@ -160,16 +160,17 @@ void cs2100_configure(I2CDriver* i2cd)
                  CS2100_DEVICE_CFG_1_AUX_OUT_SRC_CLK_OUT |
                  CS2100_DEVICE_CFG_1_EN_DEV_CFG_1);
 
-    /* Must set EN_DEV_CFG_2 to 2. */
+    /* Must set EN_DEV_CFG_2 to 1. */
     cs2100_write(CS2100_GLOBAL_CFG, CS2100_GLOBAL_CFG_EN_DEV_CFG_2);
+}
 
-    /* Wait for PLL to lock. */
+/* Get PLL Lock Status */
+bool cs2100_pll_status(void){
+
     bool unlocked;
-    do {
-        static uint8_t ctrl __attribute__((section("DATA_RAM")));
-        ctrl = cs2100_read(CS2100_DEVICE_CTRL);
-        unlocked = ctrl & CS2100_DEVICE_CTRL_UNLOCK;
-        chThdSleepMilliseconds(10);
-    } while(unlocked);
+    static uint8_t ctrl __attribute__((section("DATA_RAM")));
+    ctrl = cs2100_read(CS2100_DEVICE_CTRL);
+    unlocked = ctrl & CS2100_DEVICE_CTRL_UNLOCK;
+    return !unlocked;
 }
 

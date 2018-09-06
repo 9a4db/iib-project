@@ -488,8 +488,8 @@
  *          the system is halted.
  */
 #define CH_CFG_SYSTEM_HALT_HOOK(reason) {                                   \
-  /* System halt code here - SYS_ERR LED */                                 \
-  GPIOC->ODR |= (1<<7);                                                     \
+  /* System halt code here - STATUS LED OFF */                              \
+  GPIOC->ODR = 0;                                                           \
 }
 
 /** @} */

@@ -152,8 +152,8 @@ static const uint8_t vcom_string0[] = {
 static const uint8_t vcom_string1[] = {
   USB_DESC_BYTE(38),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  'C', 0, 'U', 0, ' ', 0, 'S', 0, 'p', 0, 'a', 0, 'c', 0, 'e', 0,
-  'f', 0, 'l', 0, 'i', 0, 'g', 0, 'h', 0, 't', 0,
+  'M', 0, 'A', 0, 'T', 0, 'T', 0, 'H', 0, 'E', 0, 'W', 0, ' ', 0,
+  'C', 0, 'O', 0, 'A', 0, 'T', 0, 'E', 0, 'S', 0,
 };
 
 /*
@@ -162,7 +162,7 @@ static const uint8_t vcom_string1[] = {
 static const uint8_t vcom_string2[] = {
   USB_DESC_BYTE(56),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  'T', 0, 'O', 0, 'A', 0, 'D', 0, ' ', 0, 'V', 0, 'i', 0, 
+  'G', 0, 'P', 0, 'S', 0, 'D', 0, 'O', 0, ' ', 0, 'V', 0, 'i', 0, 
   'r', 0, 't', 0, 'u', 0, 'a', 0, 'l', 0, ' ', 0, 'C', 0,
    'O', 0, 'M', 0, ' ', 0, 'P', 0, 'o', 0, 'r', 0, 't', 0
 };

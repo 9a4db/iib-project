@@ -116,7 +116,6 @@ static bool gps_tx_ack(uint8_t *buf)
     } while( (r != UBLOX_ACK) && (r != UBLOX_NAK) );
 
     if(r == UBLOX_NAK){
-        set_status(STATUS_ERROR);
         return false;
     }
     return true;
@@ -174,7 +173,6 @@ static enum ublox_result ublox_state_machine(uint8_t b)
         case STATE_L1:
             length |= (uint16_t)b << 8;
             if(length >= 128) {
-                set_status(STATUS_ERROR);
                 state = STATE_IDLE;
                 return UBLOX_RXLEN_TOO_LONG;
             }
@@ -201,7 +199,6 @@ static enum ublox_result ublox_state_machine(uint8_t b)
             ck = gps_fletcher_8(ck, (uint8_t*)&length, 2);
             ck = gps_fletcher_8(ck, payload, length);
             if(ck_a != (ck&0xFF) || ck_b != (ck>>8)) {
-                set_status(STATUS_ERROR);
                 state=STATE_IDLE;
                 return UBLOX_BAD_CHECKSUM;
             }
@@ -213,13 +210,11 @@ static enum ublox_result ublox_state_machine(uint8_t b)
                 case UBX_ACK:
                     if(id == UBX_ACK_NAK) {
                         /* NAK */
-                        set_status(STATUS_ERROR);
                         return UBLOX_NAK;
                     } else if(id == UBX_ACK_ACK) {
                         /* ACK - Do Nothing */
                         return UBLOX_ACK;
                     } else {
-                        set_status(STATUS_ERROR);
                         return UBLOX_UNHANDLED;
                     }
                     break;
@@ -256,12 +251,9 @@ static enum ublox_result ublox_state_machine(uint8_t b)
 
                         /* Extract NAV-POSECEF Payload */
                         memcpy(&posecef, payload, length);
-
-                        set_status(STATUS_GOOD);
                         return UBLOX_NAV_POSECEF;
 
                     } else {
-                        set_status(STATUS_ERROR);
                         return UBLOX_UNHANDLED;
                     }
                     break;
@@ -273,11 +265,9 @@ static enum ublox_result ublox_state_machine(uint8_t b)
                         /* NAV5 */
                         memcpy(cfg_nav5.payload, payload, length);
                         if(cfg_nav5.dyn_model != 2) {
-                            set_status(STATUS_ERROR);
                         }
                         return UBLOX_CFG_NAV5;
                     } else {
-                        set_status(STATUS_ERROR);
                         return UBLOX_UNHANDLED;
                     }
                     break;
@@ -290,8 +280,6 @@ static enum ublox_result ublox_state_machine(uint8_t b)
 
         default:
             state = STATE_IDLE;
-
-            set_status(STATUS_ERROR);
             return UBLOX_ERROR;
     }
     return UBLOX_WAIT;
@@ -468,6 +456,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
     tp5_2.id = UBX_CFG_TP5;
     tp5_2.length = sizeof(tp5_2.payload);
 
+    /* Outputs only when locked */
     tp5_2.tp_idx               = 1;     // Safeboot pin
     tp5_2.version              = 0;
     tp5_2.ant_cable_delay      = 0;
@@ -558,15 +547,13 @@ void gps_init(SerialDriver* seriald, bool nav_pvt, bool nav_posecef,
     /* Wait for GPS to restart */
     chThdSleepMilliseconds(500);
 
+    /* Start Serial Driver */
     sdStart(gps_seriald, &serial_cfg);
 
     while(!gps_configure(nav_pvt, nav_posecef, rising_edge)){
         
-        set_status(STATUS_ERROR);
         chThdSleepMilliseconds(1000);
     }
-    
-    set_status(STATUS_GOOD);
     
     return;
 }
@@ -586,9 +573,6 @@ static THD_FUNCTION(gps_thd, arg) {
     while(true){    
         if(gps_configured){            
             ublox_state_machine(sdGet(gps_seriald));
-        } else {        
-            set_status(STATUS_ERROR);
-            break;
         }
     }
 }
