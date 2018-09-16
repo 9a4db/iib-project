@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name agg)(type KiCad)(uri /home/matt/Documents/agg-kicad/agg.pretty)(options "")(descr ""))
+  (lib (name gpio)(type KiCad)(uri /home/matt/Documents/iib-project/gpio)(options "")(descr ""))
+)

@@ -1,0 +1,57 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# agg-kicad:COAX
+#
+DEF agg-kicad:COAX P 0 40 N N 1 F N
+F0 "P" 0 100 50 H V C CNN
+F1 "agg-kicad:COAX" 0 -150 50 H V C CNN
+F2 "agg:SMA-EDGE" 0 -210 50 H I C CNN
+F3 "" 100 -100 50 H I C CNN
+F4 "1608592" 0 -280 50 H I C CNN "Farnell"
+DRAW
+C 0 0 20 0 1 0 F
+C 0 0 60 0 1 0 f
+P 2 0 1 0 0 -60 0 -100 N
+X RF 1 -100 0 100 R 50 50 1 1 B
+X GND 2 -100 -100 100 R 50 50 1 1 W
+ENDDRAW
+ENDDEF
+#
+# agg-kicad:CONN_01x05
+#
+DEF agg-kicad:CONN_01x05 J 0 1 Y N 1 F N
+F0 "J" -50 100 50 H V L CNN
+F1 "agg-kicad:CONN_01x05" -50 -500 50 H V L CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+DRAW
+S 0 -395 -25 -405 0 1 0 F
+S 0 -295 -25 -305 0 1 0 F
+S 0 -195 -25 -205 0 1 0 F
+S 0 -95 -25 -105 0 1 0 F
+S 0 5 -25 -5 0 1 0 F
+S 0 50 -50 -450 0 1 0 f
+X 1 1 100 0 100 L 50 50 1 1 P
+X 2 2 100 -100 100 L 50 50 1 1 P
+X 3 3 100 -200 100 L 50 50 1 1 P
+X 4 4 100 -300 100 L 50 50 1 1 P
+X 5 5 100 -400 100 L 50 50 1 1 P
+ENDDRAW
+ENDDEF
+#
+# agg-kicad:GND
+#
+DEF agg-kicad:GND #PWR 0 40 N N 1 F P
+F0 "#PWR" -130 40 50 H I L CNN
+F1 "agg-kicad:GND" 0 -100 50 H V C CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+DRAW
+P 2 0 1 0 0 0 0 -30 N
+P 4 0 1 0 -30 -30 30 -30 0 -60 -30 -30 f
+X GND 1 0 0 0 L 50 50 1 1 W N
+ENDDRAW
+ENDDEF
+#
+#End Library
