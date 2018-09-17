@@ -142,18 +142,18 @@ void cs2100_configure(I2CDriver* i2cd)
     cs2100_write(CS2100_FUNCT_CFG_3, CS2100_FUNCT_CFG_3_CLK_IN_BW_1HZ);
 
 
-    /* Set ratio to 10MHz / 1MHz = 10
-     * 10 * (1<<20) = 0x00A00000
+    /* Set ratio to 40MHz / 1MHz = 40
+     * 40 * (1<<20) = 0x02800000
      * This register is big endian.
      */
-    cs2100_write(CS2100_RATIO_1, 0x00);
-    cs2100_write(CS2100_RATIO_2, 0xA0);
+    cs2100_write(CS2100_RATIO_1, 0x02);
+    cs2100_write(CS2100_RATIO_2, 0x80);
     cs2100_write(CS2100_RATIO_3, 0x00);
     cs2100_write(CS2100_RATIO_4, 0x00);
 
-    /* Don't shift the ratio register at all,
-     * output GPS clock on aux
-     * must set EN_DEV_CFG_1 to 1.
+    /* Don't shift the ratio register at all
+     * Output 40MHz clock on aux
+     * Must set EN_DEV_CFG_1 to 1.
      */
     cs2100_write(CS2100_DEVICE_CFG_1,
                  CS2100_DEVICE_CFG_1_R_MOD_SEL(0) |
