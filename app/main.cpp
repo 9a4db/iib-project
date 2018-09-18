@@ -14,7 +14,7 @@ int main(int argc, char** argv){
     reciever_configuration config;
     config.centre_frequency = 868e6;                // RF Center Freuency
     config.sample_rate = 30.72e6;                   // Sample Rate 
-    config.oversample_ratio = 2;                    // ADC Oversample Ratio
+    config.oversample_ratio = 4;                    // ADC Oversample Ratio
     config.antenna = LMS_PATH_LNAW;                 // RF Path
     config.rx_gain = 0.7;                           // Normalised Gain - 0 to 1.0
     config.LPF_bandwidth = 8e6;                     // RX Analog Low Pass Filter Bandwidth
@@ -37,9 +37,12 @@ int main(int argc, char** argv){
     if (LMS_SetupStream(device, &streamId) != 0)
         error();
 
-    /* Data Buffers */
+    /* Data Buffers - Interleaved IQIQIQ...*/
     const int bufersize = 1020;                     // Complex Samples per Buffer
     float buffer[bufersize * 2];                    // Buffer holds I+Q values of each sample IQIQIQIQ...
+
+    /* Book Keeping Indicies */
+
     
     /* Start streaming */
     LMS_StartStream(&streamId);
@@ -67,9 +70,9 @@ int main(int argc, char** argv){
             /* Compute Delta */
             if(pps_idx != prev_idx){
                 delta = pps_idx - prev_idx;
-                cout << "Time elapsed since last PPS event:    " << delta << " samples or " << delta/config.sample_rate << "s" << endl;
+                cout << "Delta:    " << delta << endl;
             }
-        }        
+        }    
     }
 
     /* Stop Streaming (Start again with LMS_StartStream()) */
