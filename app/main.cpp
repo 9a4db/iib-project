@@ -1,5 +1,7 @@
 #include <chrono>
 #include <iostream>
+#include <stdio.h>
+#include "string.h"
 #include "lime/LimeSuite.h"
 #include "reciever_setup.h"
 
@@ -14,9 +16,9 @@ int main(int argc, char** argv){
     reciever_configuration config;
     config.centre_frequency = 868e6;                // RF Center Freuency
     config.sample_rate = 30.72e6;                   // Sample Rate 
-    config.oversample_ratio = 4;                    // ADC Oversample Ratio
+    config.oversample_ratio = 2;                    // ADC Oversample Ratio
     config.antenna = LMS_PATH_LNAW;                 // RF Path
-    config.rx_gain = 0.7;                           // Normalised Gain - 0 to 1.0
+    config.rx_gain = 0.6;                           // Normalised Gain - 0 to 1.0
     config.LPF_bandwidth = 8e6;                     // RX Analog Low Pass Filter Bandwidth
     config.cal_bandwidth = 8e6;                     // Automatic Calibration Bandwidth
 
@@ -38,41 +40,58 @@ int main(int argc, char** argv){
         error();
 
     /* Data Buffers - Interleaved IQIQIQ...*/
-    const int bufersize = 1020;                     // Complex Samples per Buffer
-    float buffer[bufersize * 2];                    // Buffer holds I+Q values of each sample IQIQIQIQ...
+    const int bufersize = 1020;
+    int16_t curr_buffer[bufersize*2];
 
     /* Book Keeping Indicies */
-
+    uint64_t curr_buff_idx = 0;
+    uint64_t pps_sync_idx = 0;
+    uint64_t prev_pps_sync_idx = 0;
+    uint64_t sync_offset = 0;
     
+    /* Open File */
+    FILE * data_file;
+    data_file = fopen("samples.bin", "wb");
+
     /* Start streaming */
     LMS_StartStream(&streamId);
 
     /* Process Stream for 20s */
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(20)){
+    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(10)){
         
-        int samplesRead;
-        uint64_t pps_idx;
-        uint64_t prev_idx;
-        uint64_t delta;
         lms_stream_meta_t meta_data;
-        
-        samplesRead = LMS_RecvStream(&streamId, buffer, bufersize, &meta_data, 1000);
-       
-        /* Test for PPS Sync */
+
+        /* Read 1020 Samples into Buffer */
+        if(LMS_RecvStream(&streamId, curr_buffer, bufersize, &meta_data, 1000) != bufersize){
+            LMS_StopStream(&streamId);
+            LMS_DestroyStream(device, &streamId);
+            error();
+        };
+
+        /* Check PPS Sync Flag - MSB Set */
         if((meta_data.timestamp & 0x8000000000000000) == 0x8000000000000000){
             
-            /* Update PPS Index */
-            prev_idx = pps_idx;
-            pps_idx = meta_data.timestamp + 0x8000000000000000;
+            /* Extract PPS Sync Index  - Clear MSB */
+            prev_pps_sync_idx = pps_sync_idx;
+            pps_sync_idx = meta_data.timestamp ^ 0x8000000000000000;
+            curr_buff_idx += bufersize;
+            
+            /* Check for Double Fire */
+            if (pps_sync_idx != prev_pps_sync_idx){
+                
+                sync_offset = pps_sync_idx - curr_buff_idx;
+    
+                cout << "\nCurrent buffer contains samples " << curr_buff_idx << " to " << curr_buff_idx + bufersize - 1 << endl;
+                cout << "PPS sync occured at sample " << pps_sync_idx << endl;
+                cout << "Offset = " << sync_offset << endl;
 
-            /* Compute Delta */
-            if(pps_idx != prev_idx){
-                delta = pps_idx - prev_idx;
-                cout << "Delta:    " << delta << endl;
+                fwrite(curr_buffer , sizeof(int16_t), bufersize*2, data_file);               
             }
-        }    
+        } else {
+            curr_buff_idx = meta_data.timestamp;
+        }
     }
 
     /* Stop Streaming (Start again with LMS_StartStream()) */
@@ -83,6 +102,9 @@ int main(int argc, char** argv){
 
     /* Close Device */
     LMS_Close(device);
+
+    /* Close File */
+    fclose(data_file);
 
     return 0;
 }
