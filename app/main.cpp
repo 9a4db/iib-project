@@ -1,5 +1,7 @@
 #include <chrono>
+#include <ctime>
 #include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include "string.h"
 #include "lime/LimeSuite.h"
@@ -33,7 +35,7 @@ int main(int argc, char** argv){
     streamId.fifoSize = 1020 * 1020;                // Fifo Size in Samples
     streamId.throughputVsLatency = 1.0;             // Optimize Throughput (1.0) or Latency (0)
     streamId.isTx = false;                          // TX/RX Channel
-    streamId.dataFmt = lms_stream_t::LMS_FMT_I16;   // Data Format
+    streamId.dataFmt = lms_stream_t::LMS_FMT_I16;   // Data Format - int16_t
 
     /* Setup Stream */
     if (LMS_SetupStream(device, &streamId) != 0)
@@ -48,11 +50,12 @@ int main(int argc, char** argv){
     uint64_t curr_buff_idx = 0;
     uint64_t pps_sync_idx = 0;
     uint64_t prev_pps_sync_idx = 0;
-    uint64_t sync_offset = 0;
     
-    /* Open File */
-    FILE * data_file;
-    data_file = fopen("samples.bin", "wb");
+    /* Output File */
+    ofstream data_file;
+    file_header file_metadata;
+    string out_path = "data/";
+    const int file_length = 12 + 1;                 // 12 Buffers at 30.72 MS/s = 400 us 
 
     /* Start streaming */
     LMS_StartStream(&streamId);
@@ -60,11 +63,12 @@ int main(int argc, char** argv){
     /* Process Stream for 1s */
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(1)){
+    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(5)){
         
+        /* Stream Metadata */
         lms_stream_meta_t meta_data;
 
-        /* Read 1020 Samples into Buffer */
+        /* Read Samples into Buffer */
         if(LMS_RecvStream(&streamId, data_buffer, num_samples, &meta_data, 1000) != num_samples){
             LMS_StopStream(&streamId);
             LMS_DestroyStream(device, &streamId);
@@ -79,25 +83,52 @@ int main(int argc, char** argv){
             pps_sync_idx = meta_data.timestamp ^ 0x8000000000000000;
             curr_buff_idx += num_samples;
             
-            /* Check for Repeated Timestamp (e.g. PPS high for > 1 packet duration) */
+            /* Ignore Repeated Timestamp */
             if (pps_sync_idx != prev_pps_sync_idx){
                 
-                sync_offset = pps_sync_idx - curr_buff_idx;
-    
-                cout << "\nCurrent buffer contains samples " << curr_buff_idx << " to " << curr_buff_idx + num_samples - 1 << endl;
-                cout << "PPS sync occured at sample " << pps_sync_idx << endl;
-                cout << "Offset = " << sync_offset << endl;
+                /* UNIQUE PPS EVENT DETCETED */
 
-                cout << "IQ[0] = " << data_buffer[0] << " " << data_buffer[1] << endl;
-                cout << "IQ[1] = " << data_buffer[2] << " " << data_buffer[3] << endl;
-                cout << "IQ[2] = " << data_buffer[4] << " " << data_buffer[5] << endl;
+                /* Generate Header */
+                file_metadata.unix_stamp = std::time(NULL);
+                file_metadata.buffer_index = curr_buff_idx;
+                file_metadata.pps_index = pps_sync_idx;
+                
+                /* Open Unique File & Write Header */
+                data_file.open(out_path + to_string(file_metadata.unix_stamp) + ".bin", std::ofstream::binary);
+                data_file.write((char*)&file_metadata, sizeof(file_metadata));
 
-                cout << "Written: " << fwrite(data_buffer, sizeof(int16_t), buffer_size, data_file) << endl;        
+                /* Write Current Buffer to File */
+                data_file.write((char*)data_buffer, sizeof(data_buffer));
+
+                /* Stream to File Following PPS Event */
+                for(int k=1; k<file_length; k++){
+
+                    /* Read Samples into Buffer */
+                    if(LMS_RecvStream(&streamId, data_buffer, num_samples, &meta_data, 1000) != num_samples){
+                        LMS_StopStream(&streamId);
+                        LMS_DestroyStream(device, &streamId);
+                        error();
+                    };
+                    
+                    /* Write Samples to File */
+                    data_file.write((char*)data_buffer, sizeof(data_buffer));
+                }
+
+                /* Close File */
+                data_file.close();
+
+                /* Debug Output */
+                cout << "\nTime: " << file_metadata.unix_stamp << endl;
+                cout << "File begins with sample " << file_metadata.buffer_index << endl;
+                cout << "PPS sync occured at sample " << file_metadata.pps_index << endl;
+                cout << "Offset = " << file_metadata.pps_index - file_metadata.buffer_index << endl;     
             }
         } else {
             curr_buff_idx = meta_data.timestamp;
         }
-    }/* Stop Streaming (Start again with LMS_StartStream()) */
+    }
+
+    /* Stop Streaming (Start again with LMS_StartStream()) */
     LMS_StopStream(&streamId);
     
     /* Destroy Stream */
@@ -105,9 +136,6 @@ int main(int argc, char** argv){
 
     /* Close Device */
     LMS_Close(device);
-
-    /* Close File */
-    fclose(data_file);
 
     return 0;
 }

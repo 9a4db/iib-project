@@ -1,6 +1,7 @@
 import sys
 import struct
 import numpy as np
+from datetime import datetime
 import matplotlib.pyplot as plt
 
 # Useage
@@ -11,11 +12,21 @@ if len(sys.argv) != 2:
 # Open Datafile
 file = open(sys.argv[1], 'rb')
     
-# Detect Number of Samples
+# Compute Number of Samples Present
 file.read()
-num_samples = int(file.tell()/4)
+num_samples = int((file.tell()-24)/4)
 file.seek(0)
-print("Found", num_samples, "samples.")
+print("File contains", num_samples, "samples.")
+dur = (1/30.72)*num_samples
+print("Duration: %.4f us" % dur)
+print("")
+
+# Read Metadata
+meta = struct.unpack('QQQ', file.read(24))
+print(datetime.utcfromtimestamp(meta[0]).strftime('%Y-%m-%d %H:%M:%S'))
+print("File begins with sample", meta[1])
+print("PPS sync occured at sample", meta[2])
+print("Offset:", meta[2] - meta[1])
 
 # Create I and Q Arrays
 I = np.zeros(num_samples, dtype=float)

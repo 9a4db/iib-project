@@ -15,6 +15,13 @@ class reciever_configuration {
         double cal_bandwidth;
 };
 
+class file_header {
+    public:
+        time_t unix_stamp;
+        uint64_t buffer_index;
+        uint64_t pps_index;
+};
+
 /* Device Structure */
 extern lms_device_t* device;
 
