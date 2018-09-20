@@ -25,6 +25,13 @@ for n in range(0, num_samples):
     I[n] = struct.unpack('h', file.read(2))[0]
     Q[n] = struct.unpack('h', file.read(2))[0]
 
-plt.plot(I)
-plt.plot(Q)
+# Creat Complex Array
+samples = (I + 1j*Q)
+print(samples)
+
+# Plot I&Q Channels
+plt.plot(np.real(samples), label='I')
+plt.plot(np.imag(samples), label='Q')
+plt.grid(True)  
+plt.legend(loc='upper right', frameon=True)
 plt.show()

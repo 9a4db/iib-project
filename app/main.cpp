@@ -18,7 +18,7 @@ int main(int argc, char** argv){
     config.sample_rate = 30.72e6;                   // Sample Rate 
     config.oversample_ratio = 2;                    // ADC Oversample Ratio
     config.antenna = LMS_PATH_LNAW;                 // RF Path
-    config.rx_gain = 0.6;                           // Normalised Gain - 0 to 1.0
+    config.rx_gain = 0.7;                           // Normalised Gain - 0 to 1.0
     config.LPF_bandwidth = 8e6;                     // RX Analog Low Pass Filter Bandwidth
     config.cal_bandwidth = 8e6;                     // Automatic Calibration Bandwidth
 
@@ -39,9 +39,10 @@ int main(int argc, char** argv){
     if (LMS_SetupStream(device, &streamId) != 0)
         error();
 
-    /* Data Buffers - Interleaved IQIQIQ...*/
-    const int bufersize = 1020;
-    int16_t curr_buffer[bufersize*2];
+    /* Data Buffer - Interleaved IQIQIQ...*/
+    const int num_samples = 1020;
+    const int buffer_size = num_samples*2;
+    int16_t data_buffer[buffer_size];
 
     /* Book Keeping Indicies */
     uint64_t curr_buff_idx = 0;
@@ -56,15 +57,15 @@ int main(int argc, char** argv){
     /* Start streaming */
     LMS_StartStream(&streamId);
 
-    /* Process Stream for 20s */
+    /* Process Stream for 1s */
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(10)){
+    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(1)){
         
         lms_stream_meta_t meta_data;
 
         /* Read 1020 Samples into Buffer */
-        if(LMS_RecvStream(&streamId, curr_buffer, bufersize, &meta_data, 1000) != bufersize){
+        if(LMS_RecvStream(&streamId, data_buffer, num_samples, &meta_data, 1000) != num_samples){
             LMS_StopStream(&streamId);
             LMS_DestroyStream(device, &streamId);
             error();
@@ -73,28 +74,30 @@ int main(int argc, char** argv){
         /* Check PPS Sync Flag - MSB Set */
         if((meta_data.timestamp & 0x8000000000000000) == 0x8000000000000000){
             
-            /* Extract PPS Sync Index  - Clear MSB */
+            /* Extract PPS Sync Index - Clear MSB */
             prev_pps_sync_idx = pps_sync_idx;
             pps_sync_idx = meta_data.timestamp ^ 0x8000000000000000;
-            curr_buff_idx += bufersize;
+            curr_buff_idx += num_samples;
             
-            /* Check for Double Fire */
+            /* Check for Repeated Timestamp (e.g. PPS high for > 1 packet duration) */
             if (pps_sync_idx != prev_pps_sync_idx){
                 
                 sync_offset = pps_sync_idx - curr_buff_idx;
     
-                cout << "\nCurrent buffer contains samples " << curr_buff_idx << " to " << curr_buff_idx + bufersize - 1 << endl;
+                cout << "\nCurrent buffer contains samples " << curr_buff_idx << " to " << curr_buff_idx + num_samples - 1 << endl;
                 cout << "PPS sync occured at sample " << pps_sync_idx << endl;
                 cout << "Offset = " << sync_offset << endl;
 
-                fwrite(curr_buffer , sizeof(int16_t), bufersize*2, data_file);               
+                cout << "IQ[0] = " << data_buffer[0] << " " << data_buffer[1] << endl;
+                cout << "IQ[1] = " << data_buffer[2] << " " << data_buffer[3] << endl;
+                cout << "IQ[2] = " << data_buffer[4] << " " << data_buffer[5] << endl;
+
+                cout << "Written: " << fwrite(data_buffer, sizeof(int16_t), buffer_size, data_file) << endl;        
             }
         } else {
             curr_buff_idx = meta_data.timestamp;
         }
-    }
-
-    /* Stop Streaming (Start again with LMS_StartStream()) */
+    }/* Stop Streaming (Start again with LMS_StartStream()) */
     LMS_StopStream(&streamId);
     
     /* Destroy Stream */
