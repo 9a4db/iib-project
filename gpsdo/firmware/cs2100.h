@@ -3,8 +3,7 @@
 
 #include "hal.h"
 
-/* Configure the CS2100 to generate a suitable clock input.
- */
+/* Configure the CS2100 to generate a suitable clock input */
 void cs2100_configure(I2CDriver* i2cd);
 
 /* Returns PLL Lock Status */

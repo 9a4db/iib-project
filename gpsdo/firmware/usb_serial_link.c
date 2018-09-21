@@ -32,7 +32,7 @@ static volatile msg_t usb_mailbox_buffer[USB_MEMPOOL_ITEMS]
                                                 
     
 /* USB Serial Thread */
-static THD_WORKING_AREA(waUSBThread, 4096);
+static THD_WORKING_AREA(waUSBThread, 1024);
 static THD_FUNCTION(USBThread, arg) {
 
     (void)arg;

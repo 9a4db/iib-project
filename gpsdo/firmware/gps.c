@@ -560,7 +560,7 @@ void gps_init(SerialDriver* seriald, bool nav_pvt, bool nav_posecef,
 
 
 /* Thread to Run State Machine */
-static THD_WORKING_AREA(gps_thd_wa, 512);
+static THD_WORKING_AREA(gps_thd_wa, 2048);
 static THD_FUNCTION(gps_thd, arg) {
 
     (void)arg;

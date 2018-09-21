@@ -56,7 +56,7 @@
  *          The value one is not valid, timeouts are rounded up to
  *          this value.
  */
-#define CH_CFG_ST_TIMEDELTA                 0
+#define CH_CFG_ST_TIMEDELTA                 2
 
 /* Enable wait-for-interrupt sleep during idle */
 #define CORTEX_ENABLE_WFI_IDLE TRUE
@@ -365,7 +365,7 @@
  *
  * @note    The default is @p FALSE.
  */
-#define CH_DBG_ENABLE_TRACE                 FALSE
+#define CH_DBG_ENABLE_TRACE                 TRUE
 
 /**
  * @brief   Debug option, stack checks.

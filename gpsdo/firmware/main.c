@@ -36,11 +36,7 @@ int main(void) {
     
     /* Start Stsus Thread */
     start_status_thread();
-
-    /* Main Loop */
-    while (true) {
-
-        /* Do nothing */
-        chThdSleepMilliseconds(1000);
-    }
+    
+    /* Idle */
+    chThdSleep(TIME_INFINITE);
 }
