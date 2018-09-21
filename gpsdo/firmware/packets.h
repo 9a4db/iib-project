@@ -10,6 +10,7 @@ typedef struct __attribute__((packed)) {
     uint8_t fix_type;
     uint16_t year;
     uint8_t month, day, hour, minute, second;
+    bool pll_lock;
     
 } position_packet;
 

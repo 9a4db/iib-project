@@ -168,7 +168,7 @@ void cs2100_configure(I2CDriver* i2cd)
 bool cs2100_pll_status(void){
 
     bool unlocked;
-    static uint8_t ctrl __attribute__((section("DATA_RAM")));
+    uint8_t ctrl ;
     ctrl = cs2100_read(CS2100_DEVICE_CTRL);
     unlocked = ctrl & CS2100_DEVICE_CTRL_UNLOCK;
     return !unlocked;

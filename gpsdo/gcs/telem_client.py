@@ -32,8 +32,8 @@ while True:
     
     # Handle Position Packet
     if (log_type == MESSAGE_POSITION):
-        payload = data[5:26]
-        pos = struct.unpack('<iiiBBhBBBBB', payload)
+        payload = data[5:27]
+        pos = struct.unpack('<iiiBBhBBBBB?', payload)
         print("POSITION INFO:")
         print("Timestamp   ", systick, " s")
         print("Longitude   ", (pos[0]/10000000), "degrees")
@@ -42,5 +42,9 @@ while True:
         print("Satellites  ", pos[3])
         print("Fix Type    ", pos[4])
         print('Date         {:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime(pos[5], pos[6], pos[7], pos[8], pos[9], pos[10])))
-        print("\n\n\n\n\n\n\n\n\n\n\n\n")
+        if(pos[11]):
+            print("PLL Status   Locked")
+        else:
+            print("PLL Status   Unlocked")
+        print("\n\n\n\n\n\n\n\n\n\n\n")
  

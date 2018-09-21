@@ -3,6 +3,7 @@
 #include "ubx.h"
 #include "status.h"
 #include "packets.h"
+#include "cs2100.h"
 #include "usb_serial_link.h"
 
 MUTEX_DECL(pos_pkt_mutex);
@@ -240,6 +241,7 @@ static enum ublox_result ublox_state_machine(uint8_t b)
                         pos_pkt.hour = pvt_data.hour;
                         pos_pkt.minute = pvt_data.minute;
                         pos_pkt.second = pvt_data.second;
+                        pos_pkt.pll_lock = cs2100_pll_status();
                         
                         upload_position_packet(&pos_pkt);
         
