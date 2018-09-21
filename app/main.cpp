@@ -18,7 +18,7 @@ int main(int argc, char** argv){
     reciever_configuration config;
     config.centre_frequency = 107.8e6;              // RF Center Freuency
     config.sample_rate = 30.72e6;                   // Sample Rate 
-    config.oversample_ratio = 2;                    // ADC Oversample Ratio
+    config.oversample_ratio = 4;                    // ADC Oversample Ratio
     config.antenna = LMS_PATH_LNAW;                 // RF Path
     config.rx_gain = 0.7;                           // Normalised Gain - 0 to 1.0
     config.LPF_bandwidth = 8e6;                     // RX Analog Low Pass Filter Bandwidth
@@ -56,10 +56,6 @@ int main(int argc, char** argv){
     file_header file_metadata;
     string out_path = "data/";
     const int file_length = 12 + 1;                 // 12 Buffers at 30.72 MS/s = 400 us 
-
-    /* Test Signal */
-    if (LMS_SetTestSignal(device, LMS_CH_RX, 0, LMS_TESTSIG_NCODIV8, 0, 0) != 0)
-        error();
 
     /* Start streaming */
     LMS_StartStream(&streamId);

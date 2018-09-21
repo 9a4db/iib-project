@@ -26,7 +26,7 @@ meta = struct.unpack('QQQ', file.read(24))
 print(datetime.utcfromtimestamp(meta[0]).strftime('%Y-%m-%d %H:%M:%S'))
 print("File begins with sample", meta[1])
 print("PPS sync occured at sample", meta[2])
-print("Offset:", meta[2] - meta[1])
+print("Sync event offset =", meta[2] - meta[1])
 
 # Create I and Q Arrays
 I = np.zeros(num_samples, dtype=float)
