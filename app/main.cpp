@@ -16,7 +16,7 @@ int main(int argc, char** argv){
 
     /* Hardware Config Parameters */
     reciever_configuration config;
-    config.centre_frequency = 868e6;                // RF Center Freuency
+    config.centre_frequency = 107.8e6;              // RF Center Freuency
     config.sample_rate = 30.72e6;                   // Sample Rate 
     config.oversample_ratio = 2;                    // ADC Oversample Ratio
     config.antenna = LMS_PATH_LNAW;                 // RF Path
@@ -57,10 +57,14 @@ int main(int argc, char** argv){
     string out_path = "data/";
     const int file_length = 12 + 1;                 // 12 Buffers at 30.72 MS/s = 400 us 
 
+    /* Test Signal */
+    if (LMS_SetTestSignal(device, LMS_CH_RX, 0, LMS_TESTSIG_NCODIV8, 0, 0) != 0)
+        error();
+
     /* Start streaming */
     LMS_StartStream(&streamId);
 
-    /* Process Stream for 1s */
+    /* Process Stream for 5s */
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
     while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(5)){
@@ -109,8 +113,8 @@ int main(int argc, char** argv){
                         LMS_DestroyStream(device, &streamId);
                         error();
                     };
-                    
-                    /* Write Samples to File */
+        
+                    /* Write Samples to File ~ 6us */
                     data_file.write((char*)data_buffer, sizeof(data_buffer));
                 }
 
@@ -121,7 +125,8 @@ int main(int argc, char** argv){
                 cout << "\nTime: " << file_metadata.unix_stamp << endl;
                 cout << "File begins with sample " << file_metadata.buffer_index << endl;
                 cout << "PPS sync occured at sample " << file_metadata.pps_index << endl;
-                cout << "Offset = " << file_metadata.pps_index - file_metadata.buffer_index << endl;     
+                cout << "Samples since last PPS = " << pps_sync_idx - prev_pps_sync_idx << endl; 
+                cout << "Sync event offset = " << file_metadata.pps_index - file_metadata.buffer_index << endl;     
             }
         } else {
             curr_buff_idx = meta_data.timestamp;
