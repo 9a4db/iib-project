@@ -9,7 +9,7 @@
 
 using namespace std;
 
-// g++ main.cpp reciever_setup.cpp -std=c++11 -lLimeSuite -o a.out
+// g++ main.cpp reciever_setup.cpp -std=c++11 -lLimeSuite -o pps-rx.out
 
 /* Entry Point */
 int main(int argc, char** argv){

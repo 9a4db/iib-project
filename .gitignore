@@ -8,5 +8,10 @@ _autosave*
 build/
 .dep/
 
+# Build Objects
 *~
 *.d
+*.o
+
+# VSCode
+*/.vscode

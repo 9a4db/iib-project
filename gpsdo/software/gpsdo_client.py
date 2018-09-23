@@ -34,7 +34,7 @@ while True:
     if (log_type == MESSAGE_POSITION):
         payload = data[5:27]
         pos = struct.unpack('<iiiBBhBBBBB?', payload)
-        print("POSITION INFO:")
+        print("DEVICE INFO:")
         print("Timestamp   ", systick, " s")
         print("Longitude   ", (pos[0]/10000000), "degrees")
         print("Latitude    ", (pos[1]/10000000), "degrees")
