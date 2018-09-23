@@ -55,8 +55,13 @@ int main(int argc, char** argv){
     ofstream data_file;
     file_header file_metadata;
     string out_path = "data/";
-    const int file_length = 12 + 1;                 // 12 Buffers at 30.72 MS/s = 400 us 
+    const int file_length = 12 + 1;
+    int16_t file_buffer[buffer_size * file_length];
 
+    /* Enable Test Signal */
+    if (LMS_SetTestSignal(device, LMS_CH_RX, 0, LMS_TESTSIG_NCODIV8, 0, 0) != 0)
+        error();
+    
     /* Start streaming */
     LMS_StartStream(&streamId);
 
@@ -91,16 +96,12 @@ int main(int argc, char** argv){
                 /* Generate Header */
                 file_metadata.unix_stamp = std::time(NULL);
                 file_metadata.buffer_index = curr_buff_idx;
-                file_metadata.pps_index = pps_sync_idx;
-                
-                /* Open Unique File & Write Header */
-                data_file.open(out_path + to_string(file_metadata.unix_stamp) + ".bin", std::ofstream::binary);
-                data_file.write((char*)&file_metadata, sizeof(file_metadata));
+                file_metadata.pps_index = pps_sync_idx;                
 
-                /* Write Current Buffer to File */
-                data_file.write((char*)data_buffer, sizeof(data_buffer));
+                /* Save Current Buffer */
+                memcpy(file_buffer, data_buffer, sizeof(data_buffer));
 
-                /* Stream to File Following PPS Event */
+                /* Save Subsequent 12 Buffers */
                 for(int k=1; k<file_length; k++){
 
                     /* Read Samples into Buffer */
@@ -110,11 +111,13 @@ int main(int argc, char** argv){
                         error();
                     };
         
-                    /* Write Samples to File ~ 6us */
-                    data_file.write((char*)data_buffer, sizeof(data_buffer));
+                    memcpy(&file_buffer[buffer_size * k], data_buffer, sizeof(data_buffer));
                 }
 
-                /* Close File */
+                /* Write to File */
+                data_file.open(out_path + to_string(file_metadata.unix_stamp) + ".bin", std::ofstream::binary);
+                data_file.write((char*)&file_metadata, sizeof(file_metadata));
+                data_file.write((char*)file_buffer, sizeof(file_buffer));
                 data_file.close();
 
                 /* Debug Output */
