@@ -9,5 +9,5 @@ This folder contains various resources such as the modified image running on the
 ## Software
 This folder contains some prototype applications written in C++ that make use of the LimeSuite LMS API.
 
-# PPS-SYNC_RX
+### PPS-SYNC_RX
 This program produces an output file each second that contains a header followed by 13260 IQ samples in int16_t format. The header specifies the index of the first sample in the buffer and the index of the sample corresponding to the PPS trigger event as well as a unix timestamp for the file.
