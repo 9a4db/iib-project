@@ -67,7 +67,7 @@ int main(int argc, char** argv){
     LMS_SetupStream(device, &tx_stream);
 
     /* TX Data Buffer */
-    const int num_tx_samples = 1360;
+    const int num_tx_samples = 1360 * 8;
     const int tx_buffer_size = num_tx_samples * 2;
     int16_t tx_buffer[tx_buffer_size];
 
@@ -90,14 +90,14 @@ int main(int argc, char** argv){
     uint64_t pps_sync_idx = 0;
     uint64_t prev_pps_sync_idx = 0;
     uint64_t cap_start_idx = 0;
-    uint64_t tx_sync_offset = 1360 * 1000;              // TX Offset from PPS in Samples (200ms)
+    uint64_t tx_sync_offset = 1360 * 5000;              // TX Offset from PPS in Samples
 
 
     /* Output File */
     ofstream data_file;
     file_header file_metadata;
     string out_path = "data/";                          // Output Directory
-    const int capture_duration = 15;                    // Output File Length in Buffers
+    const int capture_duration = 16;                    // Output File Length in Buffers
     int16_t file_buffer[capture_duration * rx_buffer_size];
 
     /* Start Streams */
@@ -107,7 +107,7 @@ int main(int argc, char** argv){
     /* Process Stream */
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(10)){
+    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(5)){
         
         /* Recieve Buffer of 1360 Samples */
         if (LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000) != num_rx_samples){
@@ -137,7 +137,7 @@ int main(int argc, char** argv){
                 cap_start_idx = curr_buff_idx + tx_sync_offset - 1360;
 
                 /* Debug Info */
-                lms_stream_status_t rx_status;
+                lms_stream_status_t rx_status, tx_status;
                 LMS_GetStreamStatus(&rx_stream, &rx_status);
                 cout << "\nPPS sync occured at sample " << pps_sync_idx << endl;
                 cout << "Samples since last PPS = " << pps_sync_idx - prev_pps_sync_idx << endl;
@@ -145,6 +145,8 @@ int main(int argc, char** argv){
                 cout << "TX scheduled for sample " << tx_metadata.timestamp << endl;
                 cout << "Capture scheduled for sample " << cap_start_idx << endl;
                 cout << "RX Data rate: " << rx_status.linkRate / 1e6 << " MB/s\n";
+                LMS_GetStreamStatus(&tx_stream, &tx_status);
+                cout << "TX Dropped: " << tx_status.droppedPackets << endl;
             }
         } else {
             curr_buff_idx = rx_metadata.timestamp;
@@ -158,10 +160,13 @@ int main(int argc, char** argv){
             file_metadata.pps_index = pps_sync_idx;  
             file_metadata.buffer_index = curr_buff_idx;
             
-            cout << "Capturing at " << rx_metadata.timestamp << " or " << curr_buff_idx << endl;
+            cout << "Capturing at " << rx_metadata.timestamp << endl;
+
+            data_file.open(out_path + to_string(file_metadata.unix_stamp) + ".bin", std::ofstream::binary);
+            data_file.write((char*)&file_metadata, sizeof(file_metadata));
 
             /* Save Current Buffer */
-            memcpy(file_buffer, rx_buffer, sizeof(rx_buffer));
+            data_file.write((char*)rx_buffer, sizeof(rx_buffer));
 
             /* Loop for File Duration */
             for(int k=1; k<capture_duration; k++){
@@ -173,14 +178,10 @@ int main(int argc, char** argv){
                 }
     
                 /* Save Current Buffer */
-                memcpy(&file_buffer[rx_buffer_size * k], rx_buffer, sizeof(rx_buffer));
+                data_file.write((char*)rx_buffer, sizeof(rx_buffer));
                 curr_buff_idx += num_rx_samples;
             }
 
-            /* Write to File */
-            data_file.open(out_path + to_string(file_metadata.unix_stamp) + ".bin", std::ofstream::binary);
-            data_file.write((char*)&file_metadata, sizeof(file_metadata));
-            data_file.write((char*)file_buffer, sizeof(file_buffer));
             data_file.close();
         }
     }
