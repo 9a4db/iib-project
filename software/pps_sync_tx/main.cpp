@@ -45,7 +45,7 @@ int main(int argc, char** argv){
     rx_stream.fifoSize = 1360 * 2048;                // Fifo Size in Samples
     rx_stream.throughputVsLatency = 1.0;             // Optimize Throughput (1.0) or Latency (0)
     rx_stream.isTx = false;                          // TX/RX Channel
-    rx_stream.dataFmt = lms_stream_t::LMS_FMT_I12;   // Data Format - int16_t
+    rx_stream.dataFmt = lms_stream_t::LMS_FMT_I12;   // Data Format - 12-bit sample stored as int16_t
     LMS_SetupStream(device, &rx_stream);
 
     /* RX Data Buffer */
@@ -60,21 +60,21 @@ int main(int argc, char** argv){
     /* TX Stream Config */
     lms_stream_t tx_stream;
     tx_stream.channel = 0;                           // Channel Number
-    tx_stream.fifoSize = 1024 * 1024;                 // Fifo Size in Samples
+    tx_stream.fifoSize = 1360 * 2048;                // Fifo Size in Samples
     tx_stream.throughputVsLatency = 1.0;             // Optimize Throughput (1.0) or Latency (0)
     tx_stream.isTx = true;                           // TX/RX Channel
-    tx_stream.dataFmt = lms_stream_t::LMS_FMT_I12;   // Data Format - int16_t
+    tx_stream.dataFmt = lms_stream_t::LMS_FMT_I12;   // Data Format - 12-bit sample stored as int16_t
     LMS_SetupStream(device, &tx_stream);
 
     /* TX Data Buffer */
-    const int num_tx_samples = 1024 * 8;
+    const int num_tx_samples = 1360 * 8;
     const int tx_buffer_size = num_tx_samples * 2;
     int16_t tx_buffer[tx_buffer_size];
 
     /* TX Stream Metadata */
     lms_stream_meta_t tx_metadata;
-    tx_metadata.flushPartialPacket = false;          // Dont force sending of incomplete packets
-    tx_metadata.waitForTimestamp = false;            // Disable synchronization to HW timestamp
+    tx_metadata.flushPartialPacket = true;           // Force sending of incomplete packets
+    tx_metadata.waitForTimestamp = true;             // Enable synchronization to HW timestamp
 
     /* Generate TX Test Signal */
     const double tone_freq = 1e6;
@@ -85,6 +85,10 @@ int main(int argc, char** argv){
         tx_buffer[2*i+1] = (int16_t)(sin(w)*2048.0f);
     }
 
+    /* Sync Counters */
+    uint64_t curr_buff_idx = 0;
+    uint64_t pps_sync_idx = 0;
+    uint64_t prev_pps_sync_idx = 0;
 
     /* Output File */
     ofstream data_file;
@@ -99,35 +103,44 @@ int main(int argc, char** argv){
     auto t2 = t1;
     while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(10)){
         
-        /* Recieve Samples */
+        /* Recieve Buffer of 1360 Samples */
         if (LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000) != num_rx_samples){
             cout << "RX Stream Error" << endl;
             error();
         }
 
-        /* Transmit Samples 
-        if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
-            cout << "TX Stream Error" << endl;
-            error();
-        }*/
-        
-        /* Write Samples to File */
-        if((rx_metadata.timestamp > 60440000) && (rx_metadata.timestamp < 60453600)){
-            data_file.write((char*)rx_buffer, sizeof(rx_buffer));
-            cout << "out\n"; 
+        /* Check PPS Sync Flag - MSB Set */
+        if((rx_metadata.timestamp & 0x8000000000000000) == 0x8000000000000000){
+            
+            /* Extract PPS Sync Index - Clear MSB */
+            prev_pps_sync_idx = pps_sync_idx;
+            pps_sync_idx = rx_metadata.timestamp ^ 0x8000000000000000;
+            curr_buff_idx += num_rx_samples;
+            
+            /* Ignore Repeated Timestamp */
+            if (pps_sync_idx != prev_pps_sync_idx){
+                
+                /* Schedule TX Event */
+                tx_metadata.timestamp = pps_sync_idx + 6144000;
+                if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
+                    cout << "TX Stream Error" << endl;
+                    error();
+                }
+                
+                /* Debug Info */
+                lms_stream_status_t rx_status;
+                LMS_GetStreamStatus(&rx_stream, &rx_status);
+                cout << "\nPPS sync occured at sample " << pps_sync_idx << endl;
+                cout << "Samples since last PPS = " << pps_sync_idx - prev_pps_sync_idx << endl;
+                cout << "RX Data rate: " << rx_status.linkRate / 1e6 << " MB/s\n";
+            }
+        } else {
+            curr_buff_idx = rx_metadata.timestamp;
         }
 
-        /* Print Stats Every Second */
-        if (chrono::high_resolution_clock::now() - t2 > chrono::seconds(1)){
-            t2 = chrono::high_resolution_clock::now();
-            lms_stream_status_t status;
-            LMS_GetStreamStatus(&tx_stream, &status);
-            cout << "\nTX Data rate: " << status.linkRate / 1e6 << " MB/s\n";
-            cout << "Dropped TX packets: " << status.droppedPackets << endl;
-            LMS_GetStreamStatus(&rx_stream, &status);
-            cout << "RX Data rate: " << status.linkRate / 1e6 << " MB/s\n";
-            cout << "Dropped RX packets: " << status.droppedPackets << endl;
-            cout << "RX Timestamp: " << rx_metadata.timestamp << endl;
+        /* Record TX Event */
+        if((curr_buff_idx > pps_sync_idx+6141280) && (curr_buff_idx < pps_sync_idx+6157600)){
+            data_file.write((char*)rx_buffer, sizeof(rx_buffer));
         }
     }
   

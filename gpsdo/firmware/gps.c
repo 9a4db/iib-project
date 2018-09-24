@@ -465,7 +465,7 @@ static bool gps_configure(bool nav_pvt, bool nav_posecef, bool rising_edge) {
     tp5_2.freq_period          = 1;
     tp5_2.pulse_len_ratio      = 0; 
     tp5_2.freq_period_lock     = 1;     // 1 Hz
-    tp5_2.pulse_len_ratio_lock = 40;   // us
+    tp5_2.pulse_len_ratio_lock = 60;   // us
 
     if(rising_edge) {
 
