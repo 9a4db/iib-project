@@ -11,7 +11,7 @@ build/
 # Build Objects
 *~
 *.d
-*.o
+*.out
 
 # VSCode
 .vscode/*
