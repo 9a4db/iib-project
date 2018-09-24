@@ -14,12 +14,20 @@ file = open(sys.argv[1], 'rb')
     
 # Compute Number of Samples Present
 file.read()
-num_samples = int((file.tell())/4)
+num_samples = int((file.tell()-24)/4)
 file.seek(0)
 print("File contains", num_samples, "samples.")
 dur = (1/30.72)*num_samples
 print("Duration: %.4f us" % dur)
 print("")
+
+# Read Metadata
+meta = struct.unpack('QQQ', file.read(24))
+print(datetime.utcfromtimestamp(meta[0]).strftime('%Y-%m-%d %H:%M:%S'))
+print("File begins with sample", meta[1])
+print("PPS sync occured at sample", meta[2])
+print("TX occured at sample", meta[2] + (1360*9000))
+print("TX offset = 1360 +", (meta[2] + (1360*9000) - meta[1]) - 1360, "=", (meta[2] + (1360*9000) - meta[1]))
 
 # Create I and Q Arrays
 I = np.zeros(num_samples, dtype=float)
