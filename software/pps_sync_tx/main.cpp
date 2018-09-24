@@ -34,7 +34,7 @@ int main(int argc, char** argv){
     config.tx_cal_bandwidth = 8e6;                      // Automatic Calibration Bandwidth
 
     config.sample_rate = 30.72e6;                       // Device Sample Rate 
-    config.rf_oversample_ratio = 4;                     // ADC Oversample Ratio
+    config.rf_oversample_ratio = 1;                     // ADC Oversample Ratio
 
     configure_tranciever(config);
 
@@ -67,13 +67,13 @@ int main(int argc, char** argv){
     LMS_SetupStream(device, &tx_stream);
 
     /* TX Data Buffer */
-    const int num_tx_samples = 1360 * 8;
+    const int num_tx_samples = 1360;
     const int tx_buffer_size = num_tx_samples * 2;
     int16_t tx_buffer[tx_buffer_size];
 
     /* TX Stream Metadata */
     lms_stream_meta_t tx_metadata;
-    tx_metadata.flushPartialPacket = false;              // Force sending of incomplete packets
+    tx_metadata.flushPartialPacket = true;              // Force sending of incomplete packets
     tx_metadata.waitForTimestamp = true;                // Enable synchronization to HW timestamp
 
     /* Generate TX Test Signal */
@@ -90,14 +90,14 @@ int main(int argc, char** argv){
     uint64_t pps_sync_idx = 0;
     uint64_t prev_pps_sync_idx = 0;
     uint64_t cap_start_idx = 0;
-    uint64_t tx_sync_offset = 1360 * 4500;              // TX Offset from PPS in Samples (400ms)
+    uint64_t tx_sync_offset = 1360 * 1000;              // TX Offset from PPS in Samples (200ms)
 
 
     /* Output File */
     ofstream data_file;
     file_header file_metadata;
     string out_path = "data/";                          // Output Directory
-    const int capture_duration = 250;                    // Output File Length in Buffers
+    const int capture_duration = 15;                    // Output File Length in Buffers
     int16_t file_buffer[capture_duration * rx_buffer_size];
 
     /* Start Streams */
@@ -134,8 +134,7 @@ int main(int argc, char** argv){
                 }
 
                 /* Schedule Capture to Start One Buffer Before TX */
-                //cap_start_idx = curr_buff_idx + tx_sync_offset - 1360;
-                cap_start_idx = curr_buff_idx + 1360;
+                cap_start_idx = curr_buff_idx + tx_sync_offset - 1360;
 
                 /* Debug Info */
                 lms_stream_status_t rx_status;
@@ -159,7 +158,7 @@ int main(int argc, char** argv){
             file_metadata.pps_index = pps_sync_idx;  
             file_metadata.buffer_index = curr_buff_idx;
             
-            cout << "Capturing at " << rx_metadata.timestamp << endl;
+            cout << "Capturing at " << rx_metadata.timestamp << " or " << curr_buff_idx << endl;
 
             /* Save Current Buffer */
             memcpy(file_buffer, rx_buffer, sizeof(rx_buffer));
