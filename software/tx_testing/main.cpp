@@ -34,15 +34,17 @@ int main(int argc, char** argv){
     config.enable_tx_cal = true;                        // Enable TX Calibration
     config.tx_cal_bandwidth = 8e6;                      // Automatic Calibration Bandwidth
 
-    config.sample_rate = 30.72e6;                       // Device Sample Rate 
-    config.rf_oversample_ratio = 4;                     // ADC Oversample Ratio
+    config.sample_rate = 10e6;                          // Device Sample Rate 
+    config.rf_oversample_ratio = 8;                     // ADC Oversample Ratio
 
     configure_tranciever(config);
 
-    /* Enable Test Signal */
-    if (LMS_SetTestSignal(device, LMS_CH_RX, 0, LMS_TESTSIG_NCODIV8, 0, 0) != 0){
-        error();
-    }
+    /* Share TX & RX PLL */
+    LMS_WriteParam(device, LMS7_MAC, 2);
+    LMS_WriteParam(device, LMS7_PD_LOCH_T2RBUF, 0);
+    LMS_WriteParam(device, LMS7_MAC, 1);
+    LMS_WriteParam(device, LMS7_PD_VCO, 1);
+
 
     /* RX Stream Config  */
     lms_stream_t rx_stream;
@@ -65,101 +67,65 @@ int main(int argc, char** argv){
     /* TX Stream Config */
     lms_stream_t tx_stream;
     tx_stream.channel = 0;                              // Channel Number
-    tx_stream.fifoSize = 1360 * 2048;                   // Fifo Size in Samples
+    tx_stream.fifoSize = 256*1024;                      // Fifo Size in Samples
     tx_stream.throughputVsLatency = 0;                  // Optimize Throughput (1.0) or Latency (0)
     tx_stream.isTx = true;                              // TX/RX Channel
-    tx_stream.dataFmt = lms_stream_t::LMS_FMT_I12;      // Data Format - 12-bit sample stored as int16_t
+    tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32;      // Data Format - 12-bit sample stored as int16_t
     LMS_SetupStream(device, &tx_stream);
-
-    /* TX Data Buffer */
-    const int num_tx_samples = 1360;
-    const int tx_buffer_size = num_tx_samples * 2;
-    int16_t tx_buffer[tx_buffer_size];
 
     /* TX Stream Metadata */
     lms_stream_meta_t tx_metadata;
     tx_metadata.flushPartialPacket = false;             // Dont force sending of incomplete packets
-    tx_metadata.waitForTimestamp = true;                // Enable synchronization to HW timestamp
+    tx_metadata.waitForTimestamp = false;                // Enable synchronization to HW timestamp
+    tx_metadata.timestamp = 0;
+    
 
-    
-    /* Record Test Signal */
-    LMS_StartStream(&rx_stream);
-    if (LMS_RecvStream(&rx_stream, tx_buffer, num_tx_samples, &rx_metadata, 1000) != num_tx_samples){
-        cout << "Could not recieve test signal!" << endl;
-        error();
-    }
-    LMS_StopStream(&rx_stream);
-    
-    /* Disable Test Signal */
-    if (LMS_SetTestSignal(device, LMS_CH_RX, 0, LMS_TESTSIG_NONE, 0, 0) != 0){
-        error();
+    /* TX Data Buffer */
+    const int tx_size = 1024*8;
+    float tx_buffer[2*tx_size];     
+    for (int i = 0; i <tx_size; i++) {          
+        const double pi = acos(-1);
+        double w = 2*pi*i*(1e6)/(10e6);
+        tx_buffer[2*i] = cos(w);
+        tx_buffer[2*i+1] = sin(w);
     }
 
-    uint64_t rx_event = 0;
+    /* Output File */
     ofstream outfile;
-    outfile.open("event.bin", std::ofstream::binary);
+    outfile.open("output.bin", std::ofstream::binary);
     
-    /* 1. Start Streams */
-    LMS_StartStream(&tx_stream);
+    /* Start Streams */
     LMS_StartStream(&rx_stream);
-
-
-    /* 2. RX Event */
-    if (LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000) != num_rx_samples){
-        error();
-    } else {
-        rx_event = rx_metadata.timestamp;
-        cout << "RX Event at " << rx_event << endl;
-    }
-
-    /* 3. Schedule TX */
-    tx_metadata.timestamp = rx_event + 1360 * 1000;
-    if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
-        error();
-    }
-    LMS_StopStream(&tx_stream);
-    cout << "TX Scheduled for " << tx_metadata.timestamp << endl;
+    LMS_StartStream(&tx_stream);  
     
-    /* 4. Record TX Event */
     auto t1 = chrono::high_resolution_clock::now();
-    auto t2 = t1;
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(1)){
+    while (chrono::high_resolution_clock::now() - t1 < chrono::milliseconds(300)){
 
-        if (LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000) != num_rx_samples){
-            error();
-        }
-
-        /* Start Prior to TX */
-        if(rx_metadata.timestamp == rx_event + 1360 * 950){
-            cout << "Recording from " << rx_metadata.timestamp << endl;
-            for(int k=0; k <200; k++){
-                
-                LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000);
-                outfile.write((char*)rx_buffer, sizeof(rx_buffer));
-            }
+        /* RX/TX Samples */
+        LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000);
+        LMS_SendStream(&tx_stream, tx_buffer, tx_size, &tx_metadata, 1000);
+        
+        /* Save First 100 Packets */       
+        if(rx_metadata.timestamp < 1360*400){
+            outfile.write((char*)rx_buffer, sizeof(rx_buffer));
         }
     }
 
-    /* 5. Stop Streams */
+    /* Stop Streams */
     LMS_StopStream(&rx_stream);
-
-    outfile.close();     
+    LMS_StopStream(&tx_stream);  
 
     /* Destroy Stream */
     LMS_DestroyStream(device, &rx_stream);
-    LMS_DestroyStream(device, &tx_stream);   
+    LMS_DestroyStream(device, &tx_stream);
+
+    outfile.close(); 
     
     /* Disable TX/RX Channels */
     if (LMS_EnableChannel(device, LMS_CH_TX, 0, false)!=0)
         error();
     if (LMS_EnableChannel(device, LMS_CH_RX, 0, false)!=0)
         error();
-
-    /* Write Waveform to File */
-    ofstream wfm;
-    wfm.open("wfm.bin", std::ofstream::binary);
-    wfm.write((char*)tx_buffer, sizeof(tx_buffer));
-    wfm.close();
 
     /* Close Device */
     if (LMS_Close(device)==0)
