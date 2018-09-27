@@ -8,7 +8,7 @@ using namespace std;
 lms_device_t* device = NULL;
 
 /* Prototypes */
-int open_reciever(void);
+int open_device(void);
 
 
 /* Configure Reciever */
@@ -17,7 +17,7 @@ int configure_reciever(reciever_configuration rx_config){
     /*  DEVICE SETUP  */
     
     /* Connect to LimeSDR */
-    if (open_reciever() != 0)
+    if (open_device() != 0)
         return -1;
 
     /* Initialize Device with Default Configuration */
@@ -32,7 +32,7 @@ int configure_reciever(reciever_configuration rx_config){
     /*  LO SELECTION  */
 
     /* Set Centre Frequency */
-    if (LMS_SetLOFrequency(device, LMS_CH_RX, 0, rx_config.centre_frequency) != 0)
+    if (LMS_SetLOFrequency(device, LMS_CH_RX, 0, rx_config.rx_centre_frequency) != 0)
         error();
 
     /* Print Selected Centre Frequency */
@@ -50,31 +50,21 @@ int configure_reciever(reciever_configuration rx_config){
     if ((num_ant = LMS_GetAntennaList(device, LMS_CH_RX, 0, antenna_list)) < 0)
         error();
 
-    /* Print Avaliable Antennae */
-    cout << "Available antennae:\n";
-    for (int i = 0; i < num_ant; i++)
-        cout << i << ": " << antenna_list[i] << endl;
+    /* Select RX Antenna */
+    if (LMS_SetAntenna(device, LMS_CH_RX, 0, rx_config.rx_antenna) != 0)
+        error();
 
     /* Print Currently Selected Antenna */
     int ant_idx;
     if ((ant_idx = LMS_GetAntenna(device, LMS_CH_RX, 0)) < 0)
         error();
-    cout << "Automatically selected antenna: " << ant_idx << ": " << antenna_list[ant_idx] << endl;
-
-    /* Select Desired Antenna */
-    if (LMS_SetAntenna(device, LMS_CH_RX, 0, rx_config.antenna) != 0)
-        error();
-
-    /* Print Currently Selected Antenna */
-    if ((ant_idx = LMS_GetAntenna(device, LMS_CH_RX, 0)) < 0)
-        error();
-    cout << "Manually selected antenna: " << ant_idx << ": " << antenna_list[ant_idx] << endl;
+    cout << "Selected RX path: " << ant_idx << ": " << antenna_list[ant_idx] << endl;
 
 
     /*  SAMPLE RATE SELECTION  */
 
     /* Set Sample Rate & Preferred Oversampling in RF */
-    if (LMS_SetSampleRate(device, rx_config.sample_rate, rx_config.oversample_ratio) != 0)
+    if (LMS_SetSampleRate(device, rx_config.sample_rate, rx_config.rf_oversample_ratio) != 0)
         error();
     
     /* Print Resulting Sampling Rates (ADC & Host Interface) */
@@ -86,17 +76,21 @@ int configure_reciever(reciever_configuration rx_config){
 
     /*  LPF SELECTION  */
 
-    /* Print LPF Allowed Range */
-    lms_range_t range;
-    if (LMS_GetLPFBWRange(device, LMS_CH_RX, &range)!=0)
-        error();
-    cout << "RX LPF bandwitdh range: " << range.min / 1e6 << " - " << range.max / 1e6 << " MHz\n";
-    
-    /* Enable Analog RX LPF & Set Bandwidth */
-    if (LMS_SetLPFBW(device, LMS_CH_RX, 0, rx_config.LPF_bandwidth) != 0)
-        error();
-    cout << "RX LPF bandwitdh: " <<  rx_config.LPF_bandwidth / 1e6 << " MHz\n";
+    /* RX LPF Setup */
+    if(rx_config.enable_rx_LPF){
 
+        /* Set RX Analog LPF Bandwidth - 1.4001 to 130 MHz */
+        if (LMS_SetLPFBW(device, LMS_CH_RX, 0, rx_config.rx_LPF_bandwidth) != 0)
+            error();
+        cout << "RX LPF bandwitdh: " <<  rx_config.rx_LPF_bandwidth / 1e6 << " MHz\n";
+
+    } else {
+
+        /* Disable RX LPF */
+        LMS_SetLPF(device, LMS_CH_RX, 0, false);
+        cout << "RX LPF disabled \n";
+    }
+    
 
     /*  RX GAIN SELECTION  */
 
@@ -119,9 +113,12 @@ int configure_reciever(reciever_configuration rx_config){
 
     /*  CALIBRATION  */
 
-    /* Perform Automatic Calibration */
-    if (LMS_Calibrate(device, LMS_CH_RX, 0, rx_config.cal_bandwidth, 0) != 0)
-        error();
+    /* RX Calibration - 2.5 to 120 MHz */
+    if(rx_config.enable_rx_cal){        
+        if (LMS_Calibrate(device, LMS_CH_RX, 0, rx_config.rx_cal_bandwidth, 0) != 0){
+            error();
+        }
+    }
 
     /* Return Success */
     return 0;
@@ -129,7 +126,7 @@ int configure_reciever(reciever_configuration rx_config){
 
 
 /* Open LimeSDR Device */
-int open_reciever(void){
+int open_device(void){
 
     /* Find Number of Devices Attached */
     int num_dev;

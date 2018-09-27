@@ -6,13 +6,15 @@ using namespace std;
 
 class reciever_configuration {
     public:
-        float_type centre_frequency;
-        size_t antenna;
-        float_type sample_rate;
-        int oversample_ratio;
+        float_type rx_centre_frequency;
+        size_t rx_antenna;        
         float_type rx_gain;
-        float_type LPF_bandwidth;
-        double cal_bandwidth;
+        bool enable_rx_LPF;
+        float_type rx_LPF_bandwidth;
+        bool enable_rx_cal;
+        double rx_cal_bandwidth;
+        float_type sample_rate;
+        int rf_oversample_ratio;
 };
 
 class file_header {
