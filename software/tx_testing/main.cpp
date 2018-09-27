@@ -93,10 +93,11 @@ int main(int argc, char** argv){
     outfile.open("output.bin", std::ofstream::binary);
 
     /* Output Buffer */
-    const int file_length = 300;
+    const int file_length = 360;
     int16_t file_buffer[rx_buffer_size * file_length];
 
     uint64_t rx_event = 0;
+    uint64_t tx_event = 0;
     
     /* 1. Start Streams */
     LMS_StartStream(&tx_stream);
@@ -119,7 +120,8 @@ int main(int argc, char** argv){
     cout << "RX Event at " << rx_event << endl;
 
     /* 3. Schedule TX */
-    tx_metadata.timestamp = rx_event + 1360 * 75;
+    tx_event = rx_event + 1360 * 75;
+    tx_metadata.timestamp = tx_event;
     if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
         error();
     }    
@@ -128,9 +130,21 @@ int main(int argc, char** argv){
     
     /* 4. Record RX Event */
     for(int k=1; k<file_length; k++){
-       
+      
         LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000);
         memcpy(&file_buffer[k*rx_buffer_size], rx_buffer, sizeof(rx_buffer));
+    
+        /* TX Round 2 */
+        if(rx_metadata.timestamp == tx_event + 16 * 1360){
+
+            tx_event = rx_metadata.timestamp + 1360 * 75;
+            tx_metadata.timestamp = tx_event;
+            if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
+                error();
+            }    
+            cout << "TX Scheduled for " << tx_metadata.timestamp << endl;
+            cout << "Delta = " << tx_metadata.timestamp - rx_event << endl;
+        }    
     }
         
     /* 5. Print Stats */
