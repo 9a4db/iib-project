@@ -64,20 +64,20 @@ int main(int argc, char** argv){
     /* TX Stream Config */
     lms_stream_t tx_stream;
     tx_stream.channel = 0;                              // Channel Number
-    tx_stream.fifoSize = 1360 * 4096;                   // Fifo Size in Samples
-    tx_stream.throughputVsLatency = 1.0;                // Optimize Throughput (1.0) or Latency (0)
+    tx_stream.fifoSize = 1360 * 1024;                   // Fifo Size in Samples
+    tx_stream.throughputVsLatency = 0;                  // Optimize Throughput (1.0) or Latency (0)
     tx_stream.isTx = true;                              // TX/RX Channel
     tx_stream.dataFmt = lms_stream_t::LMS_FMT_I12;      // Data Format - 12-bit sample stored as int16_t
     LMS_SetupStream(device, &tx_stream);
     
     /* TX Data Buffer */
-    const int num_tx_samples = 1360;
+    const int num_tx_samples = 1360*8;
     const int tx_buffer_size = num_tx_samples * 2;
     int16_t tx_buffer[tx_buffer_size];
     
     /* TX Stream Metadata */
     lms_stream_meta_t tx_metadata;
-    tx_metadata.flushPartialPacket = true;             // Dont force sending of incomplete packets
+    tx_metadata.flushPartialPacket = true;             // Force sending of incomplete packets
     tx_metadata.waitForTimestamp = true;               // Enable synchronization to HW timestamp
      
     /* Generate 1 MHz Test Signal */
@@ -102,8 +102,8 @@ int main(int argc, char** argv){
     LMS_StartStream(&tx_stream);
     LMS_StartStream(&rx_stream);
 
-    /* 1.1 Let Stream Stabalise */
-    for(int j=0; j<1000; j++){
+    /* 1.1 Let Streams Stabalise */
+    for(int j=0; j<100; j++){
         LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000);
     }
 
@@ -119,7 +119,7 @@ int main(int argc, char** argv){
     cout << "RX Event at " << rx_event << endl;
 
     /* 3. Schedule TX */
-    tx_metadata.timestamp = rx_event + 1360 * 256;
+    tx_metadata.timestamp = rx_event + 1360 * 75;
     if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
         error();
     }    
