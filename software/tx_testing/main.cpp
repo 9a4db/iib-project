@@ -134,7 +134,7 @@ int main(int argc, char** argv){
         LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000);
         memcpy(&file_buffer[k*rx_buffer_size], rx_buffer, sizeof(rx_buffer));
     
-        /* TX Round 2 */
+        /* Re-transmitt following TX event */
         if(rx_metadata.timestamp == tx_event + 16 * 1360){
 
             tx_event = rx_metadata.timestamp + 1360 * 75;
