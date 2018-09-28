@@ -94,25 +94,26 @@ int main(int argc, char** argv){
     const string out_path = "data/";
 
     /* Output Buffer */
-    const int file_length = 150;
+    const int file_length = 50;
     int16_t file_buffer[rx_buffer_size * file_length];
 
     /* Book Keeping Indicies */
     uint64_t curr_buff_idx = 0;
     uint64_t pps_sync_idx = 0;
     uint64_t prev_pps_sync_idx = 0;
+    uint64_t tx_schedule_event = 10e6;
     uint64_t tx_start_event = 0;
-    uint64_t tx_capture_event = 1e6;
-    uint64_t tx_schedule_event = 1e6;
-
-    /* Start Streams */
-    LMS_StartStream(&rx_stream);
+    uint64_t tx_capture_event = 10e6;
+    uint64_t tx_stop_event = 10e6;
     
+
+    /* Start RX Stream */
+    LMS_StartStream(&rx_stream);
 
     /* Process Stream for 15s */
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(5)){
+    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(10)){
 
         /* Read Samples into Buffer */
         if(LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000) != num_rx_samples){
@@ -134,58 +135,70 @@ int main(int argc, char** argv){
                 
                 /* UNIQUE PPS EVENT DETCETED */
 
-                tx_schedule_event = curr_buff_idx + 1360 * 500;
-                tx_start_event = curr_buff_idx + 1360 * 575;
-                tx_capture_event = curr_buff_idx + 1360 * 515;
+                tx_schedule_event = curr_buff_idx + 1360 * 500;         // Send TX samples in 500 buffers time
+                tx_capture_event = curr_buff_idx + 1360 * (575 - 15);   // Begin recording ~15 buffers prior to TX
+                tx_start_event = pps_sync_idx + 1360 * 575;             // TX scheduled for 782 000 samples after PPS
+                tx_stop_event = curr_buff_idx + 1360 * (575 + 15);      // Close TX stream ~15 buffers after start of TX
    
-                /* Debug Output */
                 cout << "\nCurrent buffer = " << curr_buff_idx << endl;
                 cout << "PPS event occured at " << pps_sync_idx << endl;
-                cout << "TX scheduled for " << tx_start_event << endl;
-                cout << "Capturing at " << tx_capture_event << endl;
-                cout << "Offset = " << tx_start_event - tx_capture_event << endl;
             }
         } else {
             curr_buff_idx = rx_metadata.timestamp;
         }
 
-        /* Schedule TX */
+        /* Schedule TX Event */
         if(curr_buff_idx == tx_schedule_event){
-            tx_metadata.timestamp = tx_start_event;
+            
+            /* Start TX Stream */
             LMS_StartStream(&tx_stream);
+
+            /* Send TX Buffer */
+            tx_metadata.timestamp = tx_start_event;
             if (LMS_SendStream(&tx_stream, tx_buffer, num_tx_samples, &tx_metadata, 1000) != num_tx_samples){
                 error();
             }
-            cout << "TX buffer sent - " << tx_metadata.timestamp << endl;
+            cout << "Buffer sent, TX scheduled for " << tx_metadata.timestamp << endl;
+            cout << "Offset = " << tx_start_event - tx_capture_event << endl;
         }
 
         /* Capture TX Event */
         if(curr_buff_idx == tx_capture_event){
             
+            /* Save Current RX Buffer */
             memcpy(file_buffer, rx_buffer, sizeof(rx_buffer));
+
+            cout << "Capturing at " << curr_buff_idx << endl;
+            
+            /* Generate File Metadata */
+            file_metadata.unix_stamp = std::time(NULL);
+            file_metadata.buffer_index = curr_buff_idx;
+            file_metadata.pps_index = pps_sync_idx;
+
+            /* Save Subsequent RX Buffers */
             for(int k=1; k<file_length; k++){
     
                 LMS_RecvStream(&rx_stream, rx_buffer, num_rx_samples, &rx_metadata, 1000);
                 memcpy(&file_buffer[k*rx_buffer_size], rx_buffer, sizeof(rx_buffer));
                 curr_buff_idx += num_rx_samples;
 
-                /* Stop Stream */
-                if(curr_buff_idx == tx_start_event + 1360 * 10){
+                /* Stop TX Stream */
+                if(curr_buff_idx == tx_stop_event){
                     LMS_StopStream(&tx_stream);
-                    cout << "TX stopped" << endl;
+                    cout << "TX stopped at " << curr_buff_idx << endl;
                 }  
             }
             
             /* Write to File */
-            outfile.open(out_path + to_string(std::time(NULL)) + ".bin", std::ofstream::binary);
+            outfile.open(out_path + to_string(file_metadata.unix_stamp) + ".bin", std::ofstream::binary);
+            outfile.write((char*)&file_metadata, sizeof(file_metadata));
             outfile.write((char*)file_buffer, sizeof(file_buffer));
             outfile.close();
         }
     }
 
-    /* Stop Streams */
+    /* Stop RX Stream */
     LMS_StopStream(&rx_stream);
-    
     
     /* Destroy Stream */
     LMS_DestroyStream(device, &rx_stream);
